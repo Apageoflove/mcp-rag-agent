@@ -1,0 +1,25 @@
+# Neo4j 知识图谱数据库
+# 数据卷挂载到项目内 output/neo4j/，换机器插 PSSD 即可用
+# 启动: docker compose up -d
+# 停止: docker compose down
+
+services:
+  neo4j:
+    image: neo4j:5-community
+    container_name: mcp-rag-neo4j
+    ports:
+      - "7474:7474"   # HTTP
+      - "7687:7687"   # Bolt
+    environment:
+      - NEO4J_AUTH=neo4j/your_password
+      - NEO4J_PLUGINS=["apoc"]
+    volumes:
+      - ./output/neo4j/data:/data
+      - ./output/neo4j/logs:/logs
+      - ./output/neo4j/import:/var/lib/neo4j/import
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "your_password", "RETURN 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

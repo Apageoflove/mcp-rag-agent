@@ -1,0 +1,51 @@
+# ===== 敏感信息（绝不推送）=====
+.env
+*.env
+.env.*
+
+# ===== Python 运行环境 / 缓存 =====
+env/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# ===== 模型文件（体积大，README 里给下载说明）=====
+models/
+
+# ===== 运行产物 =====
+output/
+workspace/
+
+# ===== 原始备份 / 内部脚本（不对外）=====
+scripts/
+
+# ===== 内部文档（含开发过程记录，不对外）=====
+doc/
+
+# ===== IDE / 工具配置 =====
+.idea/
+.codeartsdoer/
+.codegraph/
+.deepeval/
+.omo/
+lib/
+
+# ===== 根目录内部文档（项目方案 / 路由配置等，不对外）=====
+项目方案.md
+项目二：基于MCP协议的多模态RAG增强智能体系统.md
+模型路由配置文档.md
+mcp_agent_启动.md
+项目启动指南.md
+requirements-freeze.txt
+
+# ===== data 下的禁用样本 =====
+data/_disabled/
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
