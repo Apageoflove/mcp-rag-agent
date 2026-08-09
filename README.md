@@ -235,6 +235,7 @@ Cross-Encoder：query 和 doc 拼一起喂入 transformer 做交叉注意力，�
 │   ├── 21_kg_visualizer.py      # 知识图谱可视化
 │   ├── _reranker.py             # Cross-Encoder 重排模块
 │   ├── _memory_graph.py         # 内存图后端（Neo4j 降级）
+│   ├── _text_utils.py           # 共享文本工具（think 剥离 / 文件名还原）
 │   ├── _kg_gold.py              # 测试金标准数据
 │   ├── _eval_helpers.py         # 评测工具函数
 │   ├── run_embed_all.py         # 一键入库脚本
@@ -242,7 +243,9 @@ Cross-Encoder：query 和 doc 拼一起喂入 transformer 做交叉注意力，�
 ├── data/                        # 4 篇测试论文 PDF
 ├── images/                      # 架构图与结果图
 ├── tests/                       # 单元测试（pytest，不依赖模型/接口）
+├── .github/workflows/ci.yml     # CI：push / PR 自动跑单测
 ├── requirements.txt
+├── pytest.ini                   # pytest 配置（testpaths=tests）
 ├── docker-compose.yml           # Neo4j（可选）
 ├── .env.example                 # 环境变量模板（复制成 .env 填值）
 ├── LICENSE
@@ -263,6 +266,8 @@ Cross-Encoder：query 和 doc 拼一起喂入 transformer 做交叉注意力，�
 | `13_retriever_agent` | `retrieve`, `mmr_rerank` | 多路召回 + MMR 多样性重排 |
 | `15_reflection_agent` | `verify_answer`, `_claim_supported` | token 级幻觉检测（命名实体/数字从严）|
 | `16_agent_orchestrator` | `answer` | 端到端编排：路由→检索→推理→反思 |
+| `_memory_graph` | `InMemoryGraph`, `execute_standardized_cypher` | 纯 Python 图后端（Neo4j 降级）+ Cypher 解释器 |
+| `_text_utils` | `strip_think` | M3 思维链剥离（06/08/10/14 共用）|
 
 ---
 
