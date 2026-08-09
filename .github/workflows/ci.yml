@@ -1,0 +1,27 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      # 只跑 tests/ 下的纯函数单测，不依赖本地模型权重和接口，
+      # 所以这里只装个 pytest，不装 requirements.txt 那堆重依赖
+      - name: Install pytest
+        run: pip install pytest
+      - name: Run tests
+        run: pytest
