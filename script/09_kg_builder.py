@@ -22,7 +22,12 @@ from _memory_graph import InMemoryGraph, build_graph_from_triples as _build_mem_
 RELATION_SYNONYMS = {
     'uses':         ['uses', 'use', 'utilize', 'utilizes', 'employ',
                      'employs', 'adopt', 'adopts', 'powered by', 'poweredby',
-                     'based on', 'built on', 'accomplish', 'accomplishes'],
+                     'based on', 'built on', 'accomplish', 'accomplishes',
+                     # 08_kg_extractor 把 based on/built on/extend/derived from
+                     # 归一到标准名 based_on，这里得把下划线版一并收进来，
+                     # 否则 08 产出的 based_on 逃过 09 归一化，图谱里同义散成两条边
+                     'based_on', 'extend', 'extends', 'derived from',
+                     'derive from'],
     'proposes':     ['proposes', 'propose', 'present', 'presents',
                      'introduce', 'introduces', 'develop', 'develops'],
     'supports':     ['supports', 'support', 'enable', 'enables',
