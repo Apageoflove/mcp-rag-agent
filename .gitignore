@@ -2,6 +2,8 @@
 .env
 *.env
 .env.*
+# .env.example 是给人照着填的模板，没有真 key，得留着
+!.env.example
 
 # ===== Python 运行环境 / 缓存 =====
 env/

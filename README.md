@@ -88,14 +88,13 @@ modelscope download --model BAAI/bge-reranker-v2-m3 --local_dir models/bge-reran
 
 ### 4. 配置 API Key
 
-在项目根目录建一个 `.env` 文件（已在 `.gitignore` 里，不会被上传）：
+复制 `.env.example` 成 `.env`，填上 MiniMax API Key（`.env` 已在 `.gitignore` 里，不会被上传）：
 
-```ini
-MINIMAX_API_KEY=你的_MiniMax_API_Key
-MINIMAX_API_HOST=https://api.minimaxi.com/v1
+```bash
+cp .env.example .env
 ```
 
-MiniMax API Key 在 https://platform.minimaxi.com 注册获取。代码里的 LLM 调用走 MiniMax-M3 的 OpenAI 兼容接口。
+MiniMax API Key 在 https://platform.minimaxi.com 注册获取。代码里的 LLM 调用走 MiniMax-M3 的 OpenAI 兼容接口。Neo4j 那几个变量不填也能跑（知识图谱会回落到内存图），要连 Neo4j 再填。
 
 ### 5. （可选）启动 Neo4j
 
