@@ -26,7 +26,7 @@ m04 = SourceFileLoader('m04', str(Path(__file__).resolve().parent / '04_embedder
 m05 = SourceFileLoader('m05', str(Path(__file__).resolve().parent / '05_llm_client.py')).load_module()
 
 from config import RETRIEVE_TOP_K
-from _text_utils import strip_think
+from _text_utils import strip_think, parse_rerank_scores
 
 
 # 复用 04 已经定义的 chunks 目录
@@ -212,31 +212,21 @@ Score criteria:
 
     try:
         resp = m05.simple_chat(prompt)
-        # 剔除 <think>...</think> 推理块，再提取 JSON 数组
-        resp_clean = strip_think(resp)
-        m = re.search(r'\[.*\]', resp_clean, re.DOTALL)
-        if not m:
-            # 备用：逐个提取 {"index":int,"score":int}
-            pairs = re.findall(r'\{\s*"index"\s*:\s*(\d+)\s*,\s*"score"\s*:\s*(\d+)\s*\}', resp_clean)
-            if not pairs:
-                return candidates[:top_k]
-            scores = [{"index": int(i), "score": int(s)} for i, s in pairs]
-        else:
-            scores = json.loads(m.group(0))
-        # 把分数加到candidates
+        # 解析 LLM 打分（去重 + 越界过滤，见 _text_utils.parse_rerank_scores）
+        scores_by_idx = parse_rerank_scores(resp, len(candidates))
+        if not scores_by_idx:
+            return candidates[:top_k]
+        # 把分数加到 candidates，同一 index 只出现一次
         scored = []
-        for s in scores:
-            idx = s.get('index')
-            if 0 <= idx < len(candidates):
-                c = dict(candidates[idx])
-                c['rerank_score'] = s.get('score', 0)
-                scored.append(c)
+        for idx, score in scores_by_idx.items():
+            c = dict(candidates[idx])
+            c['rerank_score'] = score
+            scored.append(c)
         # 按分数降序
         scored.sort(key=lambda x: -x.get('rerank_score', 0))
-        # 如果某些候选没被评分，追加到末尾
-        scored_ids = set(s.get('index') for s in scores)
+        # 没被评分的候选追加到末尾（保留它们，免得丢信息）
         for i, c in enumerate(candidates):
-            if i not in scored_ids:
+            if i not in scores_by_idx:
                 scored.append(c)
         return scored[:top_k]
     except Exception as e:
