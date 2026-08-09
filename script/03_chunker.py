@@ -229,7 +229,8 @@ if __name__ == "__main__":
     from importlib import import_module
     sys.path.insert(0, 'script')
     parsed = import_module('02_pdf_parser').parse_pdf(sys.argv[1])
-    pdf_name = sys.argv[1].split('/')[-1]
+    # 用 Path 取文件名，别 split('/')——Windows 路径分隔符是 \，split('/') 切不出来
+    pdf_name = Path(sys.argv[1]).name
     chunks = chunk_document(parsed, source_name=pdf_name)
 
     # 简单诊断

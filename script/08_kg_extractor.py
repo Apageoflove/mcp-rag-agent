@@ -242,7 +242,8 @@ if __name__ == "__main__":
     sys.path.insert(0, 'script')
 
     pdf_path = sys.argv[1]
-    pdf_name = pdf_path.split('/')[-1]
+    # 用 Path 取文件名，别 split('/')——Windows 路径分隔符是 \，split('/') 切不出来
+    pdf_name = Path(pdf_path).name
 
     print("步骤1: 解析PDF...")
     parsed = import_module('02_pdf_parser').parse_pdf(pdf_path)
