@@ -21,6 +21,19 @@ m11 = SourceFileLoader("m11", str(Path(__file__).resolve().parent / "11_summary_
 m12 = SourceFileLoader("m12", str(Path(__file__).resolve().parent / "12_router_agent.py")).load_module()
 from _eval_helpers import _normalize_text  # 复用统一归一化
 
+# m04（embedder）惰性加载 + 缓存：source_filter 分支才用，不用的查询不触发
+# sentence_transformers 的加载；用过的复用，不每次重新 load_module
+_m04 = None
+
+
+def _get_m04():
+    global _m04
+    if _m04 is None:
+        _m04 = SourceFileLoader(
+            "m04", str(Path(__file__).resolve().parent / "04_embedder.py")
+        ).load_module()
+    return _m04
+
 
 def _doc_id(item: dict) -> str:
     """用 (source, page, chunk_index) 或文本前 80 字做去重 key。"""
@@ -92,9 +105,7 @@ def _retrieve_vector(query: str, top_k: int, source_filter: str = None) -> list[
     """
     try:
         if source_filter:
-            m04 = SourceFileLoader(
-                "m04", str(Path(__file__).resolve().parent / "04_embedder.py")
-            ).load_module()
+            m04 = _get_m04()
             where = {"source": source_filter}
             vec = m04.query(query, top_k=top_k, where=where)  # score = 1 - cos dist
             # BM25 补充：把向量没召回的同来源 chunk 加进来（不覆盖向量分）
