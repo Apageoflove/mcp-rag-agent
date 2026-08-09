@@ -13,6 +13,7 @@ from importlib.machinery import SourceFileLoader
 
 m16 = SourceFileLoader("m16", str(Path(__file__).resolve().parent / "16_agent_orchestrator.py")).load_module()
 m21 = SourceFileLoader("m21", str(Path(__file__).resolve().parent / "21_kg_visualizer.py")).load_module()
+from _text_utils import chunk_filename_to_pdf
 
 import gradio as gr
 
@@ -23,7 +24,7 @@ KG_DIR = Path(__file__).resolve().parent.parent.parent / "output" / "kg_triples"
 def list_sources():
     if not CHUNKS_DIR.exists():
         return ["(无)"]
-    out = sorted(p.stem.replace(".pdf", "") + ".pdf" for p in CHUNKS_DIR.glob("*.json"))
+    out = sorted(chunk_filename_to_pdf(p.name) for p in CHUNKS_DIR.glob("*.json"))
     return out or ["(无)"]
 
 

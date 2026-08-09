@@ -40,3 +40,17 @@ class TestStripThink:
 
     def test_only_think(self):
         assert tu.strip_think("<think>only reasoning</think>") == ""
+
+
+class TestChunkFilenameToPdf:
+    def test_pdf_chunk(self):
+        assert tu.chunk_filename_to_pdf("bge_paper.pdf.json") == "bge_paper.pdf"
+        assert tu.chunk_filename_to_pdf("resnet.pdf.json") == "resnet.pdf"
+
+    def test_non_pdf_chunk_not_silently_broken(self):
+        # 不含 .pdf 的分块文件名，原样返回，不再错加 .pdf
+        assert tu.chunk_filename_to_pdf("notes.json") == "notes"
+        assert tu.chunk_filename_to_pdf("data.json") == "data"
+
+    def test_no_json_extension(self):
+        assert tu.chunk_filename_to_pdf("bge_paper.pdf") == "bge_paper.pdf"
