@@ -4,7 +4,7 @@
 
 > A retrieval-augmented generation (RAG) agent that turns research papers into a queryable, traceable knowledge base: hybrid retrieval + knowledge-graph multi-hop reasoning + multi-agent orchestration, exposed as tools over the MCP protocol and evaluated with RAGAS.
 
-![Python](https://img.shields.io/badge/Python-3.12-blue) ![License](https://img.shields.io/badge/License-MIT-green) ![RAG](https://img.shields.io/badge/RAG-GraphRAG-orange)
+![Python](https://img.shields.io/badge/Python-3.12-blue) ![License](https://img.shields.io/badge/License-MIT-green) ![RAG](https://img.shields.io/badge/RAG-GraphRAG-orange) [![tests](https://github.com/Apageoflove/mcp-rag-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Apageoflove/mcp-rag-agent/actions/workflows/ci.yml)
 
 ---
 

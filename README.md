@@ -4,7 +4,7 @@
 
 > 把论文变成可问答、可溯源知识库的检索增强生成（RAG）智能体：混合检索 + 知识图谱多跳推理 + 多 Agent 编排，按 MCP 协议对外提供工具，并用 RAGAS 做标准评估。
 
-![Python](https://img.shields.io/badge/Python-3.12-blue) ![License](https://img.shields.io/badge/License-MIT-green) ![RAG](https://img.shields.io/badge/RAG-GraphRAG-orange)
+![Python](https://img.shields.io/badge/Python-3.12-blue) ![License](https://img.shields.io/badge/License-MIT-green) ![RAG](https://img.shields.io/badge/RAG-GraphRAG-orange) [![tests](https://github.com/Apageoflove/mcp-rag-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Apageoflove/mcp-rag-agent/actions/workflows/ci.yml)
 
 ---
 
@@ -251,6 +251,19 @@ Cross-Encoder：query 和 doc 拼一起喂入 transformer 做交叉注意力，�
 ├── LICENSE
 └── README.md
 ```
+
+---
+
+## 测试
+
+单元测试只覆盖不依赖模型 / 接口的纯函数，所以不用下 7G 模型权重也能跑：
+
+```bash
+pip install pytest
+pytest
+```
+
+146 个用例覆盖归一化、分块、检索融合、路由分类、忠实度判定、Cypher 校验、图谱查询、关系归一化、摘要抽取等。CI（Python 3.11 / 3.12）会在每次 push / PR 自动跑。
 
 ---
 
