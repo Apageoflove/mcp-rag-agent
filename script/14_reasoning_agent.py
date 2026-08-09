@@ -18,6 +18,38 @@ m05 = SourceFileLoader("m05", str(Path(__file__).resolve().parent / "05_llm_clie
 from _eval_helpers import _normalize_text
 from _text_utils import strip_think
 
+# m04/m11/m15 惰性加载 + 缓存：按需才加载（省启动时间），加载过就复用（不重复 load_module）
+_m04 = None
+_m11 = None
+_m15 = None
+
+
+def _get_m04():
+    global _m04
+    if _m04 is None:
+        _m04 = SourceFileLoader(
+            "m04", str(Path(__file__).resolve().parent / "04_embedder.py")
+        ).load_module()
+    return _m04
+
+
+def _get_m11():
+    global _m11
+    if _m11 is None:
+        _m11 = SourceFileLoader(
+            "m11", str(Path(__file__).resolve().parent / "11_summary_indexer.py")
+        ).load_module()
+    return _m11
+
+
+def _get_m15():
+    global _m15
+    if _m15 is None:
+        _m15 = SourceFileLoader(
+            "m15", str(Path(__file__).resolve().parent / "15_reflection_agent.py")
+        ).load_module()
+    return _m15
+
 
 def _strip_think(text: str) -> str:
     """去掉 LLM 的 <think>...</think> 推理块（MiniMax-M3 思维链）。
@@ -68,9 +100,7 @@ def _extract_key_sentences(passages: list[dict], question: str,
     pool = list(passages)
     if source_filter:
         try:
-            m11 = SourceFileLoader(
-                "m11", str(Path(__file__).resolve().parent / "11_summary_indexer.py")
-            ).load_module()
+            m11 = _get_m11()
             idx = m11.load_summary_index(source_filter)
             for c in idx.get("paragraphs", []):
                 t = c.get("text", "")
@@ -92,9 +122,7 @@ def _extract_key_sentences(passages: list[dict], question: str,
 
     # 语义排序
     try:
-        m04 = SourceFileLoader(
-            "m04", str(Path(__file__).resolve().parent / "04_embedder.py")
-        ).load_module()
+        m04 = _get_m04()
         qv = m04._embed([question], is_query=True)[0]
         svs = m04._embed([s for _, s in all_sents], is_query=False)
         scored = []
@@ -167,9 +195,7 @@ def reason_with_self_consistency(question: str, passages: list[dict],
 
     # 取忠实度最高者（15 的检索式验证）
     try:
-        m15 = SourceFileLoader(
-            "m15", str(Path(__file__).resolve().parent / "15_reflection_agent.py")
-        ).load_module()
+        m15 = _get_m15()
         def faith(d):
             return m15.verify_answer(d["answer"], passages)["faithfulness"]
         drafts.sort(key=lambda d: (-faith(d), -len(d["answer"])))
