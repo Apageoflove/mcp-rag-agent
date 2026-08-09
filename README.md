@@ -241,8 +241,10 @@ Cross-Encoder：query 和 doc 拼一起喂入 transformer 做交叉注意力，�
 │   └── test_*.py                # 各模块准确率测试
 ├── data/                        # 4 篇测试论文 PDF
 ├── images/                      # 架构图与结果图
+├── tests/                       # 单元测试（pytest，不依赖模型/接口）
 ├── requirements.txt
 ├── docker-compose.yml           # Neo4j（可选）
+├── .env.example                 # 环境变量模板（复制成 .env 填值）
 ├── LICENSE
 └── README.md
 ```
@@ -272,7 +274,7 @@ Cross-Encoder：query 和 doc 拼一起喂入 transformer 做交叉注意力，�
 | Embedding | bge-m3 | 文本向量化 |
 | Reranker | bge-reranker-v2-m3 | Cross-Encoder 精排 |
 | 向量库 | ChromaDB | 语义检索 |
-| 知识图谱 | NetworkX（内存图）/ Neo4j | 多跳推理 |
+| 知识图谱 | 内置内存图（纯 Python）/ Neo4j | 多跳推理 |
 | 工具协议 | FastMCP | 标准化工具调用 |
 | 界面 | Gradio / FastAPI | Web / REST API |
 | 评估 | ragas 0.2.15 | RAGAS 标准指标 |
