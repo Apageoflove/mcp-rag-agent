@@ -1,4 +1,5 @@
 """共享的纯文本小工具（不 import 任何项目模块，方便到处复用 + 单测）。"""
+import json
 import re
 from pathlib import Path
 
@@ -32,3 +33,44 @@ def chunk_filename_to_pdf(filename: str) -> str:
     if name.endswith(".json"):
         name = name[: -len(".json")]
     return name
+
+
+def parse_rerank_scores(llm_response: str, n_candidates: int) -> dict:
+    """从 LLM 重排序响应里解析 {index: score}，去重 + 越界过滤。
+
+    LLM 不稳定时会出两类问题：
+    1. 同一个 index 返回多次评分（重复）—— 同一候选会进结果两次，挤掉别的片段
+    2. index 越界（编造不存在的候选编号）
+
+    这里：同一 index 取最高分（LLM 可能在修正自己的评分）；
+    越界的直接丢掉。返回 {合法 index: 最高分}。
+
+    解析不到任何合法评分时返回空 dict，调用方据此回退原顺序。
+    """
+    resp = strip_think(llm_response)
+    # 先试整体 JSON 数组，再退到逐个正则提取
+    scores_raw = None
+    m = re.search(r"\[.*\]", resp, re.DOTALL)
+    if m:
+        try:
+            scores_raw = json.loads(m.group(0))
+        except json.JSONDecodeError:
+            scores_raw = None
+    if not scores_raw:
+        pairs = re.findall(
+            r'\{\s*"index"\s*:\s*(\d+)\s*,\s*"score"\s*:\s*(\d+)\s*\}', resp
+        )
+        scores_raw = [{"index": int(i), "score": int(s)} for i, s in pairs]
+
+    result = {}
+    for s in scores_raw:
+        try:
+            idx = int(s.get("index", -1))
+            score = int(s.get("score", 0))
+        except (TypeError, ValueError):
+            continue
+        if 0 <= idx < n_candidates:
+            # 同一 index 取最高分
+            if idx not in result or score > result[idx]:
+                result[idx] = score
+    return result
