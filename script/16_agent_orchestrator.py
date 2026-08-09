@@ -23,11 +23,10 @@ m12 = SourceFileLoader("m12", str(Path(__file__).resolve().parent / "12_router_a
 m13 = SourceFileLoader("m13", str(Path(__file__).resolve().parent / "13_retriever_agent.py")).load_module()
 m14 = SourceFileLoader("m14", str(Path(__file__).resolve().parent / "14_reasoning_agent.py")).load_module()
 m15 = SourceFileLoader("m15", str(Path(__file__).resolve().parent / "15_reflection_agent.py")).load_module()
-from config import MAX_RETRY
 
 
 def answer(question: str, source_filter: str = None,
-           max_retry: int = MAX_RETRY, top_k: int = 5,
+           top_k: int = 5,
            use_llm_route: bool = False) -> dict:
     """端到端问答。
 
