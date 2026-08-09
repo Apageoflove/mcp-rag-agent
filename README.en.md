@@ -250,6 +250,19 @@ Wraps retrieval / graph / multimodal / web search into standard MCP (Model Conte
 
 ---
 
+## Tests
+
+Unit tests cover only pure functions that don't depend on local models or API keys, so they run without downloading the 7 GB of model weights:
+
+```bash
+pip install pytest
+pytest
+```
+
+146 test cases cover normalization, chunking, retrieval fusion, routing, faithfulness checking, Cypher validation, graph queries, relation normalization, and summary extraction. CI (Python 3.11 / 3.12) runs automatically on every push and PR.
+
+---
+
 ## Core Modules
 
 | Module | Key functions | Purpose |
