@@ -50,6 +50,5 @@ NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "your_password")
 
-# Agent 相关：置信度低于 0.7 就让 reflection 触发一次重检索，最多再试 2 轮防止死循环
+# Agent 相关：反思 Agent 的忠实度阈值
 REFLECTION_THRESHOLD = 0.7
-MAX_RETRY = 2
