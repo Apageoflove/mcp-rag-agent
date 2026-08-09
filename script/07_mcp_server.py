@@ -1,7 +1,8 @@
 """MCP 工具服务：把检索 / 图谱 / 多模态 / 联网搜索封装成 4 个 MCP tool 给 Agent 调。
 
-graph_query 和 web_search 现在还是占位（图谱在 08-10 做、联网搜索预留），
-vector_search 和 vlm_analysis 是已经能跑的。用 FastMCP 范式注册，stdio 传输。
+vector_search / graph_query / vlm_analysis 是已经能跑的（图谱走 10_kg_query，
+Neo4j 不可用时自动降级到内置内存图）；web_search 还是占位，预留以后接搜索 API。
+用 FastMCP 范式注册，stdio 传输。
 """
 
 import base64
@@ -17,6 +18,7 @@ from importlib.machinery import SourceFileLoader
 m04 = SourceFileLoader('m04', str(Path(__file__).resolve().parent / '04_embedder.py')).load_module()
 m05 = SourceFileLoader('m05', str(Path(__file__).resolve().parent / '05_llm_client.py')).load_module()
 m06 = SourceFileLoader('m06', str(Path(__file__).resolve().parent / '06_rag_query.py')).load_module()
+m10 = None  # 图谱查询模块，惰性加载（首次调 graph_query 才 import）
 
 from config import RETRIEVE_TOP_K, LLM_MODEL
 
@@ -94,22 +96,47 @@ def graph_query(
     query: str,
     max_hops: int = 2,
 ) -> str:
-    """查询 Neo4j 知识图谱，支持实体关系多跳遍历。
+    """查询知识图谱，支持实体关系多跳遍历。
+
+    走 10_kg_query 的 graph_search（自然语言 → Cypher → 执行）。
+    Neo4j 连不上时自动降级到内置内存图后端，没建过图谱（无三元组）时
+    返回 not_built 提示。
 
     Args:
-        query: Cypher 查询语句或自然语言实体名
+        query: 自然语言问题（如 "what does MiniMax-M1 use"）
         max_hops: 最大跳数（1-3），默认 2
 
     Returns:
-        JSON 字符串，包含实体节点和关系边列表
+        JSON 字符串，包含答案实体、来源（graph/vector/empty）和图谱上下文
     """
-    # 阶段二实现：连接 Neo4j，执行 Cypher 查询
-    return json.dumps({
-        'status': 'not_implemented',
-        'message': '知识图谱查询功能将在阶段二实现（Neo4j + 08-10 模块）',
-        'query': query,
-        'max_hops': max_hops,
-    }, ensure_ascii=False)
+    try:
+        # 惰性加载：首次调用才 import 10，避免启动时就拉起图谱依赖
+        global m10
+        if m10 is None:
+            m10 = SourceFileLoader(
+                'm10', str(Path(__file__).resolve().parent / '10_kg_query.py')
+            ).load_module()
+        result = m10.graph_search(query, fallback_to_vector=False)
+        source = result.get('source', 'empty')
+        # 没建过图谱（无三元组文件）→ 提示先跑 08+09 建图
+        if source == 'empty' and not result.get('cypher'):
+            return json.dumps({
+                'status': 'not_built',
+                'message': '知识图谱还没建，先跑 08_kg_extractor + 09_kg_builder 建图',
+                'query': query,
+            }, ensure_ascii=False)
+        return json.dumps({
+            'status': 'ok',
+            'source': source,
+            'answers': result.get('answers', []),
+            'context': result.get('graph_context', ''),
+            'fallback_used': result.get('fallback_used', False),
+            'cypher': result.get('cypher', ''),
+            'query': query,
+            'max_hops': max_hops,
+        }, ensure_ascii=False, indent=2)
+    except Exception as e:
+        return json.dumps({'error': f'{type(e).__name__}: {str(e)[:300]}'}, ensure_ascii=False)
 
 
 # Tool 3: vlm_analysis — 图片理解（MiniMax-M3 多模态）
