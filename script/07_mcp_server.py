@@ -289,9 +289,10 @@ if __name__ == "__main__":
         sys.exit(0)
 
     # ── Server 模式 ──
-    print(f"[MCP Server] 启动 MultiModal-RAG-Server (stdio 传输)")
-    print(f"  已注册工具: vector_search, graph_query, vlm_analysis, web_search")
-    print(f"  向量模型: bge-m3 (本地)")
-    print(f"  LLM: {LLM_MODEL}")
-    print(f"  CLI 用法: python3 07_mcp_server.py --query '你的问题' [--save result.json]")
+    # MCP stdio 协议下 stdout 是 JSON-RPC 通道，诊断信息只能走 stderr，否则破坏协议
+    print(f"[MCP Server] 启动 MultiModal-RAG-Server (stdio 传输)", file=sys.stderr)
+    print(f"  已注册工具: vector_search, graph_query, vlm_analysis, web_search", file=sys.stderr)
+    print(f"  向量模型: bge-m3 (本地)", file=sys.stderr)
+    print(f"  LLM: {LLM_MODEL}", file=sys.stderr)
+    print(f"  CLI 用法: python3 07_mcp_server.py --query '你的问题' [--save result.json]", file=sys.stderr)
     mcp.run(transport="stdio")
