@@ -11,6 +11,7 @@ from _memory_graph import (
     execute_standardized_cypher as _mem_exec_triple,
     execute_path_cypher as _mem_exec_path,
 )
+from _text_utils import strip_think
 
 m05 = SourceFileLoader('m05', str(Path(__file__).resolve().parent / '05_llm_client.py')).load_module()
 m09 = SourceFileLoader('m09', str(Path(__file__).resolve().parent / '09_kg_builder.py')).load_module()
@@ -152,7 +153,7 @@ def nl_to_cypher(question: str, available_relations: list[str],
             max_tokens=500,
         )
         cypher = resp.choices[0].message.content.strip()
-        cypher = re.sub(r'<think>.*?</think>\s*', '', cypher, flags=re.DOTALL).strip()
+        cypher = strip_think(cypher)
         cypher = re.sub(r'^```(?:cypher)?\s*', '', cypher)
         cypher = re.sub(r'\s*```$', '', cypher)
         return cypher.strip()

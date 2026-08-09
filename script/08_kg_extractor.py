@@ -7,6 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
 from openai import OpenAI
+from _text_utils import strip_think
 
 # RELATION_TYPES = {
 #     '任职': ['任职', '担任', '出任', '就职', 'CEO', 'CTO', '总裁'],
@@ -77,7 +78,7 @@ def call_llm_extract(client, chunk_text):
         )
         content = resp.choices[0].message.content.strip()
 
-        content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+        content = strip_think(content)
 
         if content.startswith('```'):
             content = re.sub(r'^```\w*\n?', '', content)

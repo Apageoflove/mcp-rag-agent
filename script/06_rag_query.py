@@ -26,11 +26,8 @@ m04 = SourceFileLoader('m04', str(Path(__file__).resolve().parent / '04_embedder
 m05 = SourceFileLoader('m05', str(Path(__file__).resolve().parent / '05_llm_client.py')).load_module()
 
 from config import RETRIEVE_TOP_K
+from _text_utils import strip_think
 
-
-def _strip_think(text: str) -> str:
-    """剔除 MiniMax-M3 的 <think>...</think> 推理块，保留最终答案"""
-    return re.sub(r'<think>.*?</think>\s*', '', text, flags=re.DOTALL).strip()
 
 # 复用 04 已经定义的 chunks 目录
 CHUNKS_DIR = Path(__file__).resolve().parent.parent.parent / 'output' / 'chunks'
@@ -216,7 +213,7 @@ Score criteria:
     try:
         resp = m05.simple_chat(prompt)
         # 剔除 <think>...</think> 推理块，再提取 JSON 数组
-        resp_clean = _strip_think(resp)
+        resp_clean = strip_think(resp)
         m = re.search(r'\[.*\]', resp_clean, re.DOTALL)
         if not m:
             # 备用：逐个提取 {"index":int,"score":int}
@@ -321,7 +318,7 @@ def answer(query: str, top_k: int = RETRIEVE_TOP_K,
     t1 = time.time()
     try:
         ans = m05.simple_chat(prompt, system_message=_ANSWER_SYSTEM)
-        ans = _strip_think(ans)  # 剔除 <think> 推理块
+        ans = strip_think(ans)  # 剔除 <think> 推理块
     except Exception as e:
         ans = f"[生成失败] {type(e).__name__}: {str(e)[:200]}"
     t_generate = time.time() - t1
