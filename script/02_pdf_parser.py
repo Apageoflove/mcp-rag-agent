@@ -497,6 +497,7 @@ def ocr_page_with_m3(pdf_path, page_idx):
     """把页面渲染成图片丢给 M3 多模态识别，慢但兜底用"""
     import base64
     import sys
+    import tempfile
     from pathlib import Path
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     try:
@@ -505,30 +506,38 @@ def ocr_page_with_m3(pdf_path, page_idx):
     except ImportError:
         return ""
 
-    # 用pdfplumber将页面转为图片
-    with pdfplumber.open(pdf_path) as pdf:
-        page = pdf.pages[page_idx]
-        img = page.to_image(resolution=200)
-        img.save('/tmp/opencode/page_ocr.png')
+    # 渲染到系统临时目录，别写死 /tmp（Windows 没有，而且原来也没 mkdir，目录不存在直接崩）
+    tmp_path = Path(tempfile.gettempdir()) / f"mcp_rag_ocr_{page_idx}.png"
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            page = pdf.pages[page_idx]
+            img = page.to_image(resolution=200)
+            img.save(str(tmp_path))
 
-    # 读取图片并转base64
-    with open('/tmp/opencode/page_ocr.png', 'rb') as f:
-        img_base64 = base64.b64encode(f.read()).decode()
+        # 读取图片并转base64
+        with open(tmp_path, 'rb') as f:
+            img_base64 = base64.b64encode(f.read()).decode()
 
-    # 调用M3多模态API
-    client = OpenAI(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
-    response = client.chat.completions.create(
-        model=LLM_MODEL,
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "text", "text": "请识别图片中的所有文字内容，保持原有的排版格式。"},
-                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_base64}"}}
-            ]
-        }],
-        max_tokens=4000,
-    )
-    return response.choices[0].message.content
+        # 调用M3多模态API
+        client = OpenAI(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
+        response = client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "请识别图片中的所有文字内容，保持原有的排版格式。"},
+                    {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_base64}"}}
+                ]
+            }],
+            max_tokens=4000,
+        )
+        return response.choices[0].message.content
+    finally:
+        # 用完删掉临时图片，免得越堆越多
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 # 加表格提取和图片位置
