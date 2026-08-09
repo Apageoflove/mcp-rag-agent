@@ -26,7 +26,9 @@ for d in [DATA_DIR, CHROMA_DIR, NEO4J_DIR, LOG_DIR]:
 # ---- LLM（走 MiniMax 的 OpenAI 兼容接口）----
 # 密钥只从 .env 读，没配就让它直接报错，不在代码里留 fallback
 LLM_API_KEY = os.getenv("MINIMAX_API_KEY")
-LLM_API_BASE = os.getenv("MINIMAX_API_HOST", "https://api.minimaxi.com/v1")
+# 注意：MINIMAX_API_HOST 只填到主机为止（不要带 /v1），下面的 LLM_BASE_URL 会自己拼 /v1。
+# 之前默认值带了 /v1，跟下面一拼变成 /v1/v1，没配 .env 的话直接打不通。
+LLM_API_BASE = os.getenv("MINIMAX_API_HOST", "https://api.minimaxi.com")
 LLM_MODEL = "MiniMax-M3"
 LLM_BASE_URL = f"{LLM_API_BASE}/v1"
 
