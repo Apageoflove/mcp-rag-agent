@@ -16,18 +16,16 @@ from importlib.machinery import SourceFileLoader
 
 m05 = SourceFileLoader("m05", str(Path(__file__).resolve().parent / "05_llm_client.py")).load_module()
 from _eval_helpers import _normalize_text
+from _text_utils import strip_think
 
 
 def _strip_think(text: str) -> str:
     """去掉 LLM 的 <think>...</think> 推理块（MiniMax-M3 思维链）。
 
-    之前用了一个错误的正则（乱码片假名），导致 think 块没被剥离，吃光 max_tokens
-    预算，真正答案被截断。这里是正确实现：剥离 <think>...</think>（含未闭合的
-    裸 <think> 到结尾）。
+    实现见 _text_utils.strip_think（顺带处理被 max_tokens 截断的裸 <think> 到结尾，
+    不剥会把思维链当答案、还会吃光 token 预算）。
     """
-    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
-    text = re.sub(r"<think>.*$", "", text, flags=re.DOTALL)
-    return text.strip()
+    return strip_think(text)
 
 
 _REASON_SYSTEM = (
