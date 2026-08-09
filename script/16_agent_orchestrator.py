@@ -23,39 +23,7 @@ m12 = SourceFileLoader("m12", str(Path(__file__).resolve().parent / "12_router_a
 m13 = SourceFileLoader("m13", str(Path(__file__).resolve().parent / "13_retriever_agent.py")).load_module()
 m14 = SourceFileLoader("m14", str(Path(__file__).resolve().parent / "14_reasoning_agent.py")).load_module()
 m15 = SourceFileLoader("m15", str(Path(__file__).resolve().parent / "15_reflection_agent.py")).load_module()
-from config import REFLECTION_THRESHOLD, MAX_RETRY
-
-
-def _merge_passages(old: list[dict], new: list[dict]) -> list[dict]:
-    """合并新旧片段，按 doc_id 去重（保留 score 高的）。"""
-    from _eval_helpers import _normalize_text
-
-    def doc_id(item):
-        meta = item.get("metadata", item)
-        src = meta.get("source") or ""
-        page = meta.get("page", "")
-        cidx = meta.get("chunk_index", "")
-        if src and page != "":
-            return f"{src}::p{page}::c{cidx}"
-        return _normalize_text(item.get("text", ""))[:80]
-
-    merged = {}
-    for c in old + new:
-        cid = doc_id(c)
-        if cid not in merged or c.get("score", 0) > merged[cid].get("score", 0):
-            merged[cid] = c
-    return list(merged.values())
-
-
-def _retry_queries(unsupported: list[dict]) -> list[str]:
-    """从无依据断言里抽重检索 query（取断言 + 缺失证据词拼接）。"""
-    queries = []
-    for u in unsupported[:2]:  # 最多 2 条定向 query
-        claim = u.get("claim", "")
-        missing = u.get("missing", [])
-        if missing:
-            queries.append(claim)  # 断言本身常是最好的 query
-    return queries
+from config import MAX_RETRY
 
 
 def answer(question: str, source_filter: str = None,
