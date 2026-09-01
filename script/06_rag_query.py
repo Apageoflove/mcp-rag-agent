@@ -237,8 +237,28 @@ Score criteria:
 # 主检索流程
 
 def retrieve(query: str, top_k: int = RETRIEVE_TOP_K,
-             use_bm25: bool = True, use_hyde: bool = True, use_rerank: bool = True) -> list[dict]:
-    """多路召回 + RRF融合 + HyDE + LLM重排序"""
+             use_bm25: bool = True, use_hyde: bool = True, use_rerank: bool = True,
+             use_cross_encoder: bool = False) -> list[dict]:
+    """多路召回 + RRF融合 + HyDE + 可选 cross-encoder 精排 + 可选 LLM 重排。
+
+    流程：向量/BM25/HyDE 三路召回 → RRF 融合 → 候选池 candidate_k 截断 →
+    [可选] cross-encoder (bge-reranker-v2-m3) 精排裁到 top_k → [可选] LLM 重排。
+
+    默认参数 use_cross_encoder=False：
+    - 保留现有所有调用方（07_mcp_server / 13_retriever_agent / 10_kg_query）
+      的行为不变，避免静默引入 100ms+ 延迟。
+    - 由调用方显式决定是否启用，例如 07_mcp_server.vector_search 在需要
+      高精度的场景下透传 use_cross_encoder=True。
+    - 13_retriever_agent 已在自己的 pipeline 里接了 cross-encoder
+      （line 254），若主入口默认开启会造成跑两遍，所以保持 False。
+
+    关于 top_k 调大的说明：
+    - 喂给答案生成的 passage 数（top_k）变大 → prompt 噪声变大、关键事实被淹没，
+      实测 F1 反而下降（test_XX_accuracy.py 的设计意图就是小而精）。
+    - 真正的瓶颈不是"召回不够多"，而是"候选排序不准"。cross-encoder 在 15 候选
+      上挑 5 的 Hit@5 显著优于 LLM 打分（LLM 打分有 JSON 解析失败、长 passage
+      截断 [:300]、打分漂移等问题），同时延迟低一个数量级。
+    """
     candidate_k = max(top_k * 3, 15)
 
     # 1. 向量检索
@@ -268,7 +288,25 @@ def retrieve(query: str, top_k: int = RETRIEVE_TOP_K,
         all_lists.append(hyde_results)
     fused = rrf_fuse(all_lists, k=60)
 
-    # 5. LLM 重排序
+    # 5. Cross-Encoder 精排（新增，可关）
+    #    bge-reranker-v2-m3 在 15 候选上粗排挑 top_k*2（给后续 LLM 精排留余量），
+    #    比 LLM 打分准、便宜（~100ms vs ~3s）。
+    #    若模型加载失败或被显式关闭，回退到 RRF 顺序 + 后续 LLM 重排（如果有）。
+    #    四种组合语义:
+    #      CE=T, Rerank=F : cross-encoder 精排 top_k → 截断（默认推荐）
+    #      CE=T, Rerank=T : cross-encoder 粗排 top_k*2 → LLM 精排 top_k（二轮）
+    #      CE=F, Rerank=T : RRF 顺序 → LLM 精排 top_k（旧行为）
+    #      CE=F, Rerank=F : RRF 顺序直接截 top_k
+    if use_cross_encoder and len(fused) > top_k:
+        try:
+            from _reranker import rerank as _ce_rerank
+            ce_pool_size = top_k * 2 if use_rerank else top_k
+            fused = _ce_rerank(query, fused[:candidate_k], top_k=ce_pool_size)
+        except Exception as e:
+            print(f"  [重排] cross-encoder 不可用，回退 RRF 顺序: {type(e).__name__}: "
+                  f"{str(e)[:120]}", file=sys.stderr)
+
+    # 6. LLM 重排序（可选，二轮精排）
     if use_rerank and len(fused) > top_k:
         final = rerank_with_llm(query, fused[:candidate_k], top_k=top_k)
     else:
@@ -295,12 +333,15 @@ def build_prompt(query: str, contexts: list[dict]) -> str:
 
 
 def answer(query: str, top_k: int = RETRIEVE_TOP_K,
-           use_bm25=True, use_hyde=True, use_rerank=True) -> dict:
+           use_bm25=True, use_hyde=True, use_rerank=True,
+           use_cross_encoder=False) -> dict:
     """端到端RAG问答"""
     t0 = time.time()
     # 检索
     contexts = retrieve(query, top_k=top_k,
-                        use_bm25=use_bm25, use_hyde=use_hyde, use_rerank=use_rerank)
+                        use_bm25=use_bm25, use_hyde=use_hyde,
+                        use_rerank=use_rerank,
+                        use_cross_encoder=use_cross_encoder)
     t_retrieve = time.time() - t0
 
     # 生成
@@ -320,7 +361,12 @@ def answer(query: str, top_k: int = RETRIEVE_TOP_K,
         'time_retrieve': round(t_retrieve, 2),
         'time_generate': round(t_generate, 2),
         'time_total': round(time.time() - t0, 2),
-        'flags': {'bm25': use_bm25, 'hyde': use_hyde, 'rerank': use_rerank},
+        'flags': {
+            'bm25': use_bm25,
+            'hyde': use_hyde,
+            'rerank': use_rerank,
+            'cross_encoder': use_cross_encoder,
+        },
     }
 
 
@@ -333,6 +379,8 @@ if __name__ == "__main__":
     ap.add_argument('--no-bm25', action='store_true')
     ap.add_argument('--no-hyde', action='store_true')
     ap.add_argument('--no-rerank', action='store_true')
+    ap.add_argument('--cross-encoder', action='store_true',
+                    help='开启 bge-reranker-v2-m3 cross-encoder 精排（默认关闭）')
     ap.add_argument('--top-k', type=int, default=5)
     ap.add_argument('--rebuild-bm25', action='store_true')
     args = ap.parse_args()
@@ -351,9 +399,12 @@ if __name__ == "__main__":
     result = answer(q, top_k=args.top_k,
                     use_bm25=not args.no_bm25,
                     use_hyde=not args.no_hyde,
-                    use_rerank=not args.no_rerank)
+                    use_rerank=not args.no_rerank,
+                    use_cross_encoder=args.cross_encoder)
 
-    print(f"\n=== Sources (flags: bm25={result['flags']['bm25']}, hyde={result['flags']['hyde']}, rerank={result['flags']['rerank']}) ===")
+    flags = result['flags']
+    print(f"\n=== Sources (flags: bm25={flags['bm25']}, hyde={flags['hyde']}, "
+          f"cross_encoder={flags['cross_encoder']}, rerank={flags['rerank']}) ===")
     for i, src in enumerate(result['sources']):
         meta = src['metadata']
         rrf = src.get('rrf_score', '?')
