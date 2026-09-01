@@ -45,8 +45,9 @@ def vector_search(
     use_bm25: bool = True,
     use_hyde: bool = True,
     use_rerank: bool = True,
+    use_cross_encoder: bool = False,
 ) -> str:
-    """多路混合检索：向量语义 + BM25 关键词 + HyDE 假设答案 + LLM 重排序。
+    """多路混合检索：向量语义 + BM25 关键词 + HyDE 假设答案 + 可选 LLM/cross-encoder 重排序。
 
     Args:
         query: 用户查询文本（中文/英文均可）
@@ -54,6 +55,8 @@ def vector_search(
         use_bm25: 是否启用 BM25 关键词检索
         use_hyde: 是否启用 HyDE 假设答案增强
         use_rerank: 是否启用 LLM 重排序
+        use_cross_encoder: 是否启用 bge-reranker-v2-m3 cross-encoder 精排
+            （默认 False，调用方按需开启；与 06_rag_query.retrieve 默认一致）
 
     Returns:
         JSON 字符串，包含检索到的文档片段及其元数据（来源、页码、章节、分数）
@@ -62,6 +65,7 @@ def vector_search(
         results = m06.retrieve(
             query, top_k=top_k,
             use_bm25=use_bm25, use_hyde=use_hyde, use_rerank=use_rerank,
+            use_cross_encoder=use_cross_encoder,
         )
         # 精简输出：只保留检索 Agent 需要的关键字段
         simplified = []
@@ -242,6 +246,8 @@ if __name__ == "__main__":
     ap.add_argument('--no-bm25', action='store_true', help='关闭 BM25')
     ap.add_argument('--no-hyde', action='store_true', help='关闭 HyDE')
     ap.add_argument('--no-rerank', action='store_true', help='关闭 LLM 重排序')
+    ap.add_argument('--cross-encoder', action='store_true',
+                    help='开启 bge-reranker-v2-m3 cross-encoder 精排（默认关闭）')
     ap.add_argument('--save', '-s', type=str, metavar='PATH', help='结果保存到 JSON 文件')
     ap.add_argument('--vlm', type=str, metavar='IMAGE', help='分析图片（CLI 模式）')
     ap.add_argument('--vlm-question', type=str, default='请详细描述这张图片的内容', help='图片分析提问')
@@ -258,6 +264,7 @@ if __name__ == "__main__":
                 use_bm25=not args.no_bm25,
                 use_hyde=not args.no_hyde,
                 use_rerank=not args.no_rerank,
+                use_cross_encoder=args.cross_encoder,
             )
 
         # 格式化输出
